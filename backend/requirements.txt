@@ -1,0 +1,17 @@
+fastapi>=0.110.0
+uvicorn[standard]
+sse-starlette
+sqlalchemy[asyncio]>=2.0
+asyncpg
+pgvector
+alembic
+pydantic>=2.0
+pydantic-settings
+httpx
+sentence-transformers
+pdfplumber
+mistune
+numpy
+scikit-learn
+python-multipart
+python-dotenv
