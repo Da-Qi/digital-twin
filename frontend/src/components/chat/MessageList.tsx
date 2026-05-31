@@ -2,8 +2,7 @@
 
 import type { Message } from "@/lib/types";
 import { MessageBubble } from "./MessageBubble";
-
-const C = { text: "#1a1a1a", textSec: "#666", textTer: "#999", border: "#ddd", bg: "#fff", bgSec: "#f7f7f7" };
+import { C } from "@/lib/theme";
 
 export function MessageList({ messages }: { messages: Message[] }) {
   if (messages.length === 0) {

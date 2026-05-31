@@ -15,8 +15,7 @@ class DocumentResponse(BaseModel):
     processing_status: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class DocumentChunkResponse(BaseModel):
@@ -26,5 +25,4 @@ class DocumentChunkResponse(BaseModel):
     token_count: int
     metadata: dict | None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

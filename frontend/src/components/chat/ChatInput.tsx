@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef, KeyboardEvent } from "react";
-
-const C = { text: "#1a1a1a", textSec: "#666", textTer: "#999", border: "#ddd", bg: "#fff", bgSec: "#f7f7f7" };
+import { C } from "@/lib/theme";
 
 export function ChatInput({ onSend, disabled }: { onSend: (content: string) => void; disabled?: boolean }) {
   const [input, setInput] = useState("");

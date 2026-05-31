@@ -18,8 +18,7 @@ class ConversationResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class MessageCreate(BaseModel):
@@ -36,8 +35,7 @@ class MessageResponse(BaseModel):
     correction_flag: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class MessageSendRequest(BaseModel):

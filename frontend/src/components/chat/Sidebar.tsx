@@ -5,18 +5,7 @@ import { MessageSquare, User, BookOpen, FileText, Settings } from "lucide-react"
 import Link from "next/link";
 import { useChatStore } from "@/lib/store";
 import { api } from "@/lib/api";
-
-const C = {
-  text: "#1a1a1a",
-  textSec: "#666",
-  textTer: "#999",
-  border: "#ddd",
-  borderLight: "#eee",
-  bg: "#fff",
-  bgSec: "#f7f7f7",
-  accent: "#534AB7",
-  accentBg: "#EEEDFE",
-};
+import { C } from "@/lib/theme";
 
 export function Sidebar() {
   const { conversations, setConversations, setCurrentConversation, currentConversation, pendingProposalsCount } =

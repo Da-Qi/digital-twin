@@ -69,10 +69,12 @@ def chunk_plain_text(text: str, chunk_size: int | None = None, overlap: int | No
     for para in paragraphs:
         if estimate_tokens(current + para) > chunk_size and current:
             chunks.append({"content": current.strip(), "metadata": {}})
-            # Keep overlap tokens from end of current
-            words = current.split()
-            overlap_words = words[-overlap:] if overlap else []
-            current = " ".join(overlap_words) + "\n\n" + para
+            # Keep overlap tokens from end of current (rough estimate: ~4 chars per token)
+            if overlap:
+                overlap_chars = overlap * 4
+                current = current[-overlap_chars:] + "\n\n" + para
+            else:
+                current = para
         else:
             current += "\n\n" + para if current else para
 
@@ -91,8 +93,11 @@ def _split_paragraphs(chunk: dict, chunk_size: int, overlap: int) -> list[dict]:
     for para in paragraphs:
         if estimate_tokens(current + para) > chunk_size and current:
             result.append({"content": current.strip(), "metadata": chunk["metadata"]})
-            overlap_words = current.split()[-overlap:] if overlap else []
-            current = " ".join(overlap_words) + "\n\n" + para if overlap_words else para
+            if overlap:
+                overlap_chars = overlap * 4
+                current = current[-overlap_chars:] + "\n\n" + para if current else para
+            else:
+                current = para
         else:
             current += "\n\n" + para if current else para
 

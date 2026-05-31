@@ -10,8 +10,7 @@ class KnowledgeNodeResponse(BaseModel):
     description: str | None
     confidence: float
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class KnowledgeEdgeResponse(BaseModel):
@@ -21,8 +20,7 @@ class KnowledgeEdgeResponse(BaseModel):
     relation_type: str
     weight: float
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class KnowledgeGraphResponse(BaseModel):

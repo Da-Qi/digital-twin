@@ -12,8 +12,7 @@ class PersonalityTraitResponse(BaseModel):
     confidence: float
     evidence_refs: list | None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class PersonalityProfileResponse(BaseModel):
@@ -26,8 +25,7 @@ class PersonalityProfileResponse(BaseModel):
     created_at: datetime
     activated_at: datetime | None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class ProfileDiffResponse(BaseModel):

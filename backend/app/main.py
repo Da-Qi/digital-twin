@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.db.session import engine, Base
 from app.api import conversations, documents, personality, feedback, knowledge, questionnaire
+from app.services.llm import llm_service
 
 
 @asynccontextmanager
@@ -17,6 +18,7 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     yield
     # Shutdown
+    await llm_service.close()
     await engine.dispose()
 
 

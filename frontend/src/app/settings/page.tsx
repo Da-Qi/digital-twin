@@ -1,8 +1,7 @@
 "use client";
 
 import { Sidebar } from "@/components/chat/Sidebar";
-
-const C = { text: "#1a1a1a", textSec: "#666", textTer: "#999", border: "#ddd", borderLight: "#eee", bg: "#fff", bgSec: "#f7f7f7" };
+import { C } from "@/lib/theme";
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div style={{ padding: "14px 16px", borderRadius: 8, background: C.bgSec, border: "0.5px solid " + C.border }}>

@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Sidebar } from "@/components/chat/Sidebar";
-
-const C = { text: "#1a1a1a", textSec: "#666", textTer: "#999", border: "#ddd", borderLight: "#eee", bg: "#fff", bgSec: "#f7f7f7", accent: "#534AB7", accentBg: "#EEEDFE" };
+import { C } from "@/lib/theme";
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   concept: { bg: "#EEEDFE", text: "#534AB7" },

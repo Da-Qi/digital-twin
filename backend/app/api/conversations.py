@@ -91,7 +91,7 @@ async def send_message(conv_id: uuid.UUID, body: MessageSendRequest, db: AsyncSe
         llm_messages.append({"role": msg.role, "content": msg.content})
 
     if body.stream:
-        return EventSourceResponse(_stream_response(conv_id, db, llm_messages))
+        return EventSourceResponse(_stream_response(conv_id, llm_messages))
 
     # Non-streaming fallback
     response_text = await llm_service.chat(llm_messages)
@@ -106,7 +106,7 @@ async def send_message(conv_id: uuid.UUID, body: MessageSendRequest, db: AsyncSe
     return {"id": str(assistant_msg.id), "role": "assistant", "content": response_text}
 
 
-async def _stream_response(conv_id: uuid.UUID, db: AsyncSession, llm_messages: list[dict]):
+async def _stream_response(conv_id: uuid.UUID, llm_messages: list[dict]):
     """Stream the LLM response token by token via SSE."""
     full_content = ""
     try:

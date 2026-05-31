@@ -1,27 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message } from "@/lib/types";
 import { api } from "@/lib/api";
-
-const C = {
-  text: "#1a1a1a", textSec: "#666", textTer: "#999",
-  border: "#ddd", bg: "#fff", bgSec: "#f7f7f7",
-  accent: "#534AB7", accentBg: "#EEEDFE",
-};
+import { C } from "@/lib/theme";
 
 export function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === "user";
   const isStreaming = message.id === "streaming";
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState<"up" | "down" | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleFeedback = async (type: "up" | "down") => {
     setFeedbackGiven(type);
-    if (type === "down") setShowFeedback(true);
+    if (type === "down") {
+      setShowFeedback(true);
+      setTimeout(() => textareaRef.current?.focus(), 100);
+    }
     try { await api.feedback.submit({ target_message_id: message.id, feedback_type: type === "up" ? "rating" : "correction" }); }
     catch {}
+  };
+
+  const handleSubmitCorrection = async () => {
+    const text = feedbackText.trim();
+    if (!text || submitting) return;
+    setSubmitting(true);
+    try {
+      await api.feedback.submit({ target_message_id: message.id, feedback_type: "correction", user_input: text });
+      setFeedbackText("");
+      setShowFeedback(false);
+    } catch (err) { console.error("Feedback submit failed:", err); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleCancelCorrection = () => {
+    setFeedbackText("");
+    setShowFeedback(false);
   };
 
   return (
@@ -89,21 +107,36 @@ export function MessageBubble({ message }: { message: Message }) {
           </div>
         )}
         {showFeedback && (
-          <textarea
-            placeholder="分身应该怎么回答？"
-            rows={2}
-            style={{
-              width: "100%", marginTop: 6, padding: "6px 10px",
-              fontSize: 12, borderRadius: 6,
-              border: "0.5px solid " + C.border, resize: "none",
-              outline: "none", fontFamily: "inherit",
-            }}
-            onBlur={async (e) => {
-              if (e.target.value.trim()) {
-                try { await api.feedback.submit({ target_message_id: message.id, feedback_type: "correction", user_input: e.target.value }); } catch {}
-              }
-            }}
-          />
+          <div style={{ width: "100%", marginTop: 6 }}>
+            <textarea
+              ref={textareaRef}
+              placeholder="分身应该怎么回答？"
+              rows={2}
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              style={{
+                width: "100%", padding: "6px 10px",
+                fontSize: 12, borderRadius: 6,
+                border: "0.5px solid " + C.border, resize: "none",
+                outline: "none", fontFamily: "inherit", boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: 4, marginTop: 4, justifyContent: "flex-end" }}>
+              <button
+                onClick={handleCancelCorrection}
+                style={{ padding: "3px 8px", fontSize: 11, borderRadius: 4, border: "0.5px solid " + C.border, background: C.bg, cursor: "pointer", color: C.textSec }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSubmitCorrection}
+                disabled={!feedbackText.trim() || submitting}
+                style={{ padding: "3px 8px", fontSize: 11, borderRadius: 4, border: "none", background: !feedbackText.trim() || submitting ? C.bgSec : "#1a1a1a", cursor: "pointer", color: !feedbackText.trim() || submitting ? C.textTer : "#fff" }}
+              >
+                {submitting ? "提交中…" : "提交修正"}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

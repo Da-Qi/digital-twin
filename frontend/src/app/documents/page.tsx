@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Document } from "@/lib/types";
 import { Sidebar } from "@/components/chat/Sidebar";
-
-const C = { text: "#1a1a1a", textSec: "#666", textTer: "#999", border: "#ddd", borderLight: "#eee", bg: "#fff", bgSec: "#f7f7f7", accent: "#534AB7", accentBg: "#EEEDFE" };
+import { C } from "@/lib/theme";
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);

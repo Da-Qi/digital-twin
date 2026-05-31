@@ -5,9 +5,9 @@ import { useChatStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { C } from "@/lib/theme";
 import type { Message } from "@/lib/types";
-
-const C = { text: "#1a1a1a", textSec: "#666", textTer: "#999", border: "#ddd", borderLight: "#eee", bg: "#fff", bgSec: "#f7f7f7" };
 
 export function ChatView() {
   const {
@@ -66,9 +66,11 @@ export function ChatView() {
     finally {
       clearStreamContent();
       setIsStreaming(false);
-      if (currentConversation) {
+      // Use fresh state to avoid stale closure if user switched conversation during streaming
+      const conv = useChatStore.getState().currentConversation;
+      if (conv) {
         try {
-          const msgs = await api.conversations.messages.list(currentConversation.id);
+          const msgs = await api.conversations.messages.list(conv.id);
           setMessages(msgs);
         } catch (err) { console.error("Failed to reload messages:", err); }
       }
@@ -91,7 +93,7 @@ export function ChatView() {
   }
 
   const allMessages = streamingContent
-    ? [...messages, { id: "streaming", conversation_id: currentConversation.id, role: "assistant" as const, content: streamingContent, token_count: 0, correction_flag: false, created_at: new Date().toISOString() }]
+    ? [...messages, { id: "streaming", conversation_id: currentConversation!.id, role: "assistant" as const, content: streamingContent, token_count: 0, correction_flag: false, created_at: new Date().toISOString() }]
     : messages;
 
   return (
@@ -103,7 +105,9 @@ export function ChatView() {
 
       {/* Messages */}
       <div style={{ flex: 1, overflow: "auto", padding: "16px 16px 8px" }}>
-        <MessageList messages={allMessages} />
+        <ErrorBoundary>
+          <MessageList messages={allMessages} />
+        </ErrorBoundary>
         <div ref={messagesEndRef} />
       </div>
 
