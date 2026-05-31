@@ -22,6 +22,7 @@
 │  ┌─────────────────┐  ┌──────────────────┐                   │
 │  │ RAG (Retrieval)  │  │ Knowledge Graph  │                   │
 │  │ → Docs + Memories│  │ → Nodes & Edges  │                   │
+│  │   + Knowledge    │  │                  │                   │
 │  │ → Context inject │  │ → Entity store   │                   │
 │  └─────────────────┘  └──────────────────┘                   │
 └──────────────────────┬───────────────────────────────────────┘
@@ -54,7 +55,7 @@
 ### Conversation Flow
 1. User sends message in chat
 2. System builds personality-aware system prompt from active profile
-3. Retrieves relevant context (memories + document chunks) via pgvector similarity search
+3. Retrieves relevant context (memories + document chunks + knowledge nodes) via pgvector similarity search
 4. Sends to DeepSeek with history
 5. Returns response (streaming or non-streaming)
 6. Background: extracts memories from the exchange via DeepSeek
@@ -86,6 +87,8 @@
 | `personality_changelog` | Audit trail | change_type, previous_version, changed_traits |
 | `memory_entries` | Long-term memories | memory_type, content, importance, embedding (vector) |
 | `document_chunks` | Document text chunks | chunk_index, content, embedding (vector) |
+| `knowledge_nodes` | Knowledge graph entities | label, node_type, description, embedding (vector) |
+| `knowledge_edges` | Entity relationships | source_node_id, target_node_id, relation_type |
 | `feedback_log` | All feedback events | feedback_type, classification, applied_to |
 | `personality_update_proposals` | Pending profile changes | proposed_profile_id, status, feedback_ids |
 
