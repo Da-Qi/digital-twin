@@ -3,6 +3,7 @@
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import numpy as np
 import pytest
 
 from app.services.document.knowledge_extractor import (
@@ -11,6 +12,14 @@ from app.services.document.knowledge_extractor import (
     _parse_response,
     extract_knowledge_from_document,
 )
+
+
+@pytest.fixture(autouse=True)
+def mock_embedder():
+    """Prevent loading sentence-transformer model during tests."""
+    with patch("app.services.document.knowledge_extractor.embedder") as m:
+        m.encode.side_effect = lambda texts, **kw: np.array([[0.01] * 1024] * len(texts))
+        yield
 
 
 class TestSampleChunks:

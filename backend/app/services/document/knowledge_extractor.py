@@ -5,10 +5,12 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+import numpy as np
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.llm import llm_service
+from app.services.rag.embedder import embedder
 
 logger = logging.getLogger(__name__)
 
@@ -185,11 +187,19 @@ async def extract_knowledge_from_document(
         logger.info("No knowledge nodes extracted from document %s", document_id)
         return 0
 
+    # Compute embeddings in batches to avoid OOM on large extractions
+    texts_to_embed = [f"{n['label']}: {n['description']}" for n in nodes]
+    batch_size = 32
+    node_embeddings = np.vstack([
+        embedder.encode(texts_to_embed[i:i + batch_size])
+        for i in range(0, len(texts_to_embed), batch_size)
+    ])
+
     now = datetime.now(timezone.utc)
 
     # Upsert nodes
     node_id_map: dict[str, str] = {}
-    for node in nodes:
+    for i, node in enumerate(nodes):
         label = node["label"]
         node_type = node["type"]
         description = node["description"]
@@ -218,6 +228,7 @@ async def extract_knowledge_from_document(
                     SET description = :description,
                         confidence = :confidence,
                         source_ids = :source_ids,
+                        embedding = CAST(:embedding AS vector),
                         updated_at = :now
                     WHERE id = :id
                 """),
@@ -226,6 +237,7 @@ async def extract_knowledge_from_document(
                     "description": description,
                     "confidence": merged_conf,
                     "source_ids": new_ids,
+                    "embedding": str(node_embeddings[i].tolist()),
                     "now": now,
                 },
             )
@@ -233,8 +245,8 @@ async def extract_knowledge_from_document(
             node_id = str(uuid.uuid4())
             await db.execute(
                 text("""
-                    INSERT INTO knowledge_nodes (id, label, node_type, description, confidence, source_ids, created_at, updated_at)
-                    VALUES (:id, :label, :type, :description, :confidence, :source_ids, :now, :now)
+                    INSERT INTO knowledge_nodes (id, label, node_type, description, confidence, source_ids, embedding, created_at, updated_at)
+                    VALUES (:id, :label, :type, :description, :confidence, :source_ids, CAST(:embedding AS vector), :now, :now)
                 """),
                 {
                     "id": node_id,
@@ -243,6 +255,7 @@ async def extract_knowledge_from_document(
                     "description": description,
                     "confidence": confidence,
                     "source_ids": [document_id],
+                    "embedding": str(node_embeddings[i].tolist()),
                     "now": now,
                 },
             )

@@ -1,3 +1,5 @@
+import logging
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,10 +14,18 @@ from app.services.llm import llm_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure app-level loggers are visible in uvicorn logs
+    _app_logger = logging.getLogger("app")
+    _app_logger.setLevel(logging.INFO)
+    if not _app_logger.handlers:
+        _app_logger.addHandler(logging.StreamHandler(sys.stdout))
     # Startup: enable pgvector extension and create tables
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(
+            text("CREATE INDEX IF NOT EXISTS idx_knowledge_nodes_embedding ON knowledge_nodes USING hnsw (embedding vector_cosine_ops)")
+        )
     yield
     # Shutdown
     await llm_service.close()
