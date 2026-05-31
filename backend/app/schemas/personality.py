@@ -36,7 +36,8 @@ class ProfileDiffResponse(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
-    proposal_id: uuid.UUID | None
+    proposal_id: uuid.UUID | None = None
     based_on: dict
-    changes: ProfileDiffResponse | None
-    auto_approved: bool
+    changes: ProfileDiffResponse | None = None
+    auto_approved: bool = False
+    message: str | None = None

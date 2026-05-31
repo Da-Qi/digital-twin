@@ -6,7 +6,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.db.session import engine, Base
-from app.api import conversations, documents, personality, feedback, knowledge, questionnaire
+from app.api import conversations, documents, personality, feedback, knowledge, questionnaire, memories
 from app.services.llm import llm_service
 
 
@@ -38,6 +38,7 @@ app.include_router(personality.router, prefix="/api/v1")
 app.include_router(feedback.router, prefix="/api/v1")
 app.include_router(knowledge.router, prefix="/api/v1")
 app.include_router(questionnaire.router, prefix="/api/v1")
+app.include_router(memories.router, prefix="/api/v1")
 
 
 @app.get("/health")

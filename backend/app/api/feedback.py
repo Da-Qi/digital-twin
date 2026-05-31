@@ -22,6 +22,16 @@ async def submit_feedback(body: FeedbackCreate, db: AsyncSession = Depends(get_d
     )
     db.add(feedback)
     await db.flush()
+
+    # Auto-classify and route if no classification was provided
+    if not body.classification:
+        try:
+            from app.services.feedback.classifier import classify_and_route_feedback
+
+            await classify_and_route_feedback(db, feedback)
+        except Exception:
+            pass
+
     await db.refresh(feedback)
     return feedback
 

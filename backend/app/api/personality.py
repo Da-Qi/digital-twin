@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.models.personality import PersonalityProfile, PersonalityTrait, PersonalityChangelog
 from app.models.feedback import PersonalityUpdateProposal, FeedbackLog
-from app.schemas.personality import PersonalityProfileResponse, AnalyzeResponse
+from app.schemas.personality import PersonalityProfileResponse, AnalyzeResponse, ProfileDiffResponse
 
 router = APIRouter(prefix="/personality", tags=["personality"])
 
@@ -44,12 +44,26 @@ async def get_version(profile_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
-async def analyze_personality(db: AsyncSession = Depends(get_db)):
-    """Trigger personality analysis pipeline. Placeholder - full implementation in Phase 2."""
+async def analyze_personality_endpoint(db: AsyncSession = Depends(get_db)):
+    """Trigger personality analysis pipeline."""
+    from app.services.personality.analyzer import analyze_personality as run_analysis
+
+    result = await run_analysis(db)
     return AnalyzeResponse(
-        based_on={"new_conversations": 0, "new_documents": 0, "new_corrections": 0},
-        changes=None,
-        auto_approved=False,
+        proposal_id=result.get("proposal_id"),
+        based_on=result["based_on"],
+        changes=(
+            ProfileDiffResponse(
+                added=result["changes"]["added"],
+                modified=result["changes"]["modified"],
+                removed=result["changes"]["removed"],
+                diff_summary=result["changes"]["diff_summary"],
+            )
+            if result.get("changes")
+            else None
+        ),
+        auto_approved=result["auto_approved"],
+        message=result.get("message"),
     )
 
 

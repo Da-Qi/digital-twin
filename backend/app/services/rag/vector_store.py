@@ -61,7 +61,7 @@ async def search_memories(db: AsyncSession, query_embedding: list[float], top_k:
     """Search memory entries by cosine similarity."""
     result = await db.execute(
         text("""
-            SELECT content, memory_type, importance,
+            SELECT id, content, memory_type, importance,
                    1 - (embedding <=> CAST(:query AS vector)) AS similarity
             FROM memory_entries
             WHERE NOT consolidated
