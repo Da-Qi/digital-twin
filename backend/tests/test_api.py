@@ -1,10 +1,11 @@
 """API integration tests.
 
-Requires a running PostgreSQL with pgvector at a separate test database.
-Set TEST_DATABASE_URL env var, or defaults to localhost.
-Run with: pytest tests/test_api.py -v --run-api-tests
+Requires a separate PostgreSQL test database with pgvector.
+Set TEST_DATABASE_URL env var (default: .../digitaltwin_test).
+Run with: RUN_API_TESTS=1 pytest tests/test_api.py -v
 
-These tests create/drop tables and are destructive — do NOT run against your dev DB.
+SAFETY: These tests DROP ALL TABLES. They will refuse to run against a
+database named "digitaltwin" (the default dev DB name).
 """
 
 import os
@@ -12,7 +13,7 @@ import os
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.main import app
 from app.db.session import Base
@@ -22,29 +23,37 @@ TEST_DB_URL = os.environ.get(
     "postgresql+asyncpg://dtadmin:dtpassword@localhost:5432/digitaltwin_test",
 )
 
-test_engine = create_async_engine(TEST_DB_URL, echo=False)
-test_session_maker = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
-
-
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_API_TESTS") != "1",
     reason="Set RUN_API_TESTS=1 to run (requires separate test DB)",
 )
 
 
-@pytest.fixture(autouse=True)
+def _check_not_dev_db(url: str) -> None:
+    """Refuse to run against the default dev database."""
+    if "/digitaltwin" in url and "digitaltwin_test" not in url:
+        raise RuntimeError(
+            f"Refusing to run destructive tests against {url}. "
+            "Point TEST_DATABASE_URL at a test-specific database."
+        )
+
+
+@pytest.fixture(scope="module")
 async def setup_db():
-    async with test_engine.begin() as conn:
+    """Create tables once per module, drop after all tests complete."""
+    _check_not_dev_db(TEST_DB_URL)
+    engine = create_async_engine(TEST_DB_URL, echo=False)
+    async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
     yield
-    async with test_engine.begin() as conn:
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    await test_engine.dispose()
+    await engine.dispose()
 
 
 @pytest.fixture
-async def client():
+async def client(setup_db):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
@@ -54,8 +63,7 @@ async def client():
 async def test_health(client: AsyncClient):
     resp = await client.get("/health")
     assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "ok"
+    assert resp.json()["status"] == "ok"
 
 
 @pytest.mark.asyncio
@@ -80,8 +88,8 @@ async def test_list_conversations(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_get_conversation(client: AsyncClient):
-    create_resp = await client.post("/api/v1/conversations", json={"title": "Get me"})
-    conv_id = create_resp.json()["id"]
+    r = await client.post("/api/v1/conversations", json={"title": "Get me"})
+    conv_id = r.json()["id"]
     resp = await client.get(f"/api/v1/conversations/{conv_id}")
     assert resp.status_code == 200
     assert resp.json()["title"] == "Get me"
@@ -89,13 +97,13 @@ async def test_get_conversation(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_delete_conversation(client: AsyncClient):
-    create_resp = await client.post("/api/v1/conversations", json={"title": "Delete me"})
-    conv_id = create_resp.json()["id"]
+    r = await client.post("/api/v1/conversations", json={"title": "Delete me"})
+    conv_id = r.json()["id"]
     resp = await client.delete(f"/api/v1/conversations/{conv_id}")
     assert resp.status_code == 204
-    get_resp = await client.get(f"/api/v1/conversations/{conv_id}")
-    assert get_resp.status_code == 200
-    assert get_resp.json()["is_archived"] is True
+    get = await client.get(f"/api/v1/conversations/{conv_id}")
+    assert get.status_code == 200
+    assert get.json()["is_archived"] is True
 
 
 @pytest.mark.asyncio
@@ -107,7 +115,6 @@ async def test_questionnaire_status_no_profile(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_feedback_create(client: AsyncClient):
-    # Use a placeholder message ID
     resp = await client.post(
         "/api/v1/feedback",
         json={
@@ -117,5 +124,4 @@ async def test_feedback_create(client: AsyncClient):
         },
     )
     assert resp.status_code == 201
-    data = resp.json()
-    assert data["feedback_type"] == "rating"
+    assert resp.json()["feedback_type"] == "rating"
