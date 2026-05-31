@@ -50,7 +50,10 @@ export const api = {
 
   // Documents
   documents: {
-    list: () => request<import("./types").Document[]>("/documents"),
+    list: async (page = 1, size = 20) => {
+      const res = await request<{items: import("./types").Document[]; total: number; page: number; size: number}>(`/documents?page=${page}&size=${size}`);
+      return res.items;
+    },
     upload: async (file: File, authorship = "unknown", title?: string) => {
       const form = new FormData();
       form.append("file", file);

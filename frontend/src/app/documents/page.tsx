@@ -25,10 +25,14 @@ export default function DocumentsPage() {
     catch (err) { console.error("Delete failed:", err); }
   };
 
-  const StatusIcon = ({ status }: { status: string }) => {
-    if (status === "ready") return <span style={{ color: "#22c55e", fontSize: 11 }}>就绪</span>;
-    if (status === "failed") return <span style={{ color: "#ef4444", fontSize: 11 }}>失败</span>;
-    return <span style={{ color: C.textTer, fontSize: 11 }}>处理中…</span>;
+  const StatusIcon = ({ doc }: { doc: Document }) => {
+    const ks = doc.metadata?.knowledge_status;
+    if (doc.processing_status === "failed") return <span style={{ color: "#ef4444", fontSize: 11 }}>失败</span>;
+    if (doc.processing_status !== "ready") return <span style={{ color: C.textTer, fontSize: 11 }}>处理中…</span>;
+    if (!ks || ks === "pending") return <span style={{ color: "#22c55e", fontSize: 11 }}>就绪</span>;
+    if (ks === "processing") return <span style={{ color: "#f59e0b", fontSize: 11 }}>知识抽取中…</span>;
+    if (ks === "failed") return <span style={{ color: "#ef4444", fontSize: 11 }}>知识抽取失败</span>;
+    return <span style={{ color: "#22c55e", fontSize: 11 }}>就绪</span>;
   };
 
   return (
@@ -71,7 +75,7 @@ export default function DocumentsPage() {
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <StatusIcon status={doc.processing_status} />
+                    <StatusIcon doc={doc} />
                     <button onClick={() => handleDelete(doc.id)} style={{ padding: 4, border: "none", background: "transparent", cursor: "pointer", color: C.textTer }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>

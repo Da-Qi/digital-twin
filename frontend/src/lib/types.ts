@@ -28,6 +28,7 @@ export interface Document {
   char_count: number;
   chunk_count: number;
   processing_status: "pending" | "processing" | "ready" | "failed";
+  metadata?: { knowledge_status?: string; knowledge_extracted?: any };
   created_at: string;
 }
 

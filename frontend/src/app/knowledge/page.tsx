@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/api";
+import type { Document } from "@/lib/types";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { C } from "@/lib/theme";
 
@@ -14,12 +15,88 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   project: { bg: "#E8F4F8", text: "#065986" },
 };
 
+const POLL_FAST = 3000;
+const POLL_SLOW = 5000;
+const FAST_POLLS = 3;
+const MAX_POLL_TIME = 60000;
+
 export default function KnowledgePage() {
   const [nodes, setNodes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [extracting, setExtracting] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollCountRef = useRef<number>(0);
+
+  const fetchGraph = async () => {
+    try {
+      const data = await api.knowledge.graph();
+      if (data.nodes && data.nodes.length > 0) {
+        setNodes(data.nodes);
+        setExtracting(false);
+        if (pollRef.current) clearTimeout(pollRef.current);
+        return true;
+      }
+    } catch {
+      // ignore, retry
+    }
+    return false;
+  };
+
+  const checkExtractionStatus = async () => {
+    // Check if any documents have pending/processing knowledge extraction
+    try {
+      const docs = await api.documents.list(1, 100);
+      const hasUnprocessed = docs.some(
+        (d: Document) =>
+          d.processing_status === "ready" &&
+          (!d.metadata?.knowledge_status || d.metadata?.knowledge_status === "pending" || d.metadata?.knowledge_status === "processing")
+      );
+      if (hasUnprocessed) return true;
+    } catch {
+      // ignore
+    }
+    return false;
+  };
 
   useEffect(() => {
-    api.knowledge.graph().then((data) => setNodes(data.nodes || [])).catch(() => setNodes([])).finally(() => setLoading(false));
+    (async () => {
+      setLoading(true);
+      const hasData = await fetchGraph();
+      if (hasData) {
+        setLoading(false);
+        return;
+      }
+
+      // No data — check if extraction might be in progress
+      const mayBeExtracting = await checkExtractionStatus();
+      if (mayBeExtracting) {
+        setExtracting(true);
+        pollCountRef.current = 0;
+        const poll = async () => {
+          const interval = pollCountRef.current < FAST_POLLS ? POLL_FAST : POLL_SLOW;
+          pollCountRef.current++;
+
+          if (pollCountRef.current * interval >= MAX_POLL_TIME) {
+            setExtracting(false);
+            setLoading(false);
+            return;
+          }
+          const found = await fetchGraph();
+          if (found) {
+            setLoading(false);
+            return;
+          }
+          pollRef.current = setTimeout(poll, interval);
+        };
+        pollRef.current = setTimeout(poll, POLL_FAST);
+      }
+
+      setLoading(false);
+    })();
+
+    return () => {
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
   }, []);
 
   const typeColor = (type: string) => TYPE_COLORS[type] || { bg: C.bgSec, text: C.textSec };
@@ -34,6 +111,13 @@ export default function KnowledgePage() {
 
           {loading ? (
             <p style={{ fontSize: 13, color: C.textTer, textAlign: "center", padding: 40 }}>加载中…</p>
+          ) : extracting ? (
+            <div style={{ textAlign: "center", padding: 40 }}>
+              <div style={{ display: "inline-block", width: 20, height: 20, border: "2px solid " + C.border, borderTopColor: C.text, borderRadius: "50%", animation: "spin 0.8s linear infinite", marginBottom: 12 }} />
+              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+              <p style={{ fontSize: 13, color: C.textSec, margin: 0 }}>正在从文档中抽取知识…</p>
+              <p style={{ fontSize: 11, color: C.textTer, margin: "4px 0 0" }}>首次抽取需要约 10-20 秒，请稍候</p>
+            </div>
           ) : nodes.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40 }}>
               <p style={{ fontSize: 13, color: C.textTer }}>还没有知识。和分身聊天、上传文档来构建知识库。</p>
